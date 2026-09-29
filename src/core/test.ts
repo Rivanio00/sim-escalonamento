@@ -3,10 +3,14 @@ import { parseInput, parseConfig, parseProcessInput } from './parser.ts';
 import { runFCFS } from './algorithms/fcfs.ts';
 import { runSJF } from './algorithms/sjf.ts';
 import { runSRTF } from './algorithms/srtf.ts';
+import { runPriorityPreemptive } from './algorithms/priorityPreemptive.ts';
+import { runPriorityNonPreemptive } from './algorithms/priorityNonPreemptive.ts';
+import { runRoundRobin } from './algorithms/roundRobin.ts';
+import { runRoundRobinAging } from './algorithms/roundRobinAging.ts';
 import { simulate } from './simulate.ts';
 import type { ProcessInput } from './types.ts';
 
-console.log('🧪 Iniciando testes unitários do Escalonador...\n');
+console.log('Iniciando testes unitários do Escalonador...\n');
 
 // 1. Teste do Parser Completo (quantum e aging vindos do próprio arquivo de entrada)
 {
@@ -117,7 +121,89 @@ console.log('🧪 Iniciando testes unitários do Escalonador...\n');
   console.log('✅ SRTF Preempção Real: OK');
 }
 
-// 6. Teste de CPU Ociosa (Idle Time)
+// 6. Teste Prioridade Não-Preemptiva
+{
+  const inputs: ProcessInput[] = [
+    { id: 'P1', order: 1, arrivalTime: 0, duration: 5, staticPriority: 2 },
+    { id: 'P2', order: 2, arrivalTime: 0, duration: 2, staticPriority: 3 },
+    { id: 'P3', order: 3, arrivalTime: 1, duration: 4, staticPriority: 1 },
+    { id: 'P4', order: 4, arrivalTime: 3, duration: 3, staticPriority: 4 },
+  ];
+
+  const result = runPriorityNonPreemptive(inputs);
+
+  assert.equal(result.metrics.length, 4, 'Deve haver métricas para os 4 processos');
+  assert.equal(result.timeline.length, 14, 'Timeline deve ter 14 segundos');
+
+  console.log('✅ Prioridade Não-Preemptiva: OK');
+}
+
+// 7. Teste Prioridade Preemptiva
+{
+  const inputs: ProcessInput[] = [
+    { id: 'P1', order: 1, arrivalTime: 0, duration: 8, staticPriority: 1 },
+    { id: 'P2', order: 2, arrivalTime: 2, duration: 2, staticPriority: 3 },
+  ];
+
+  const result = runPriorityPreemptive(inputs);
+
+  const m1 = result.metrics.find((m) => m.id === 'P1')!;
+  const m2 = result.metrics.find((m) => m.id === 'P2')!;
+
+  assert.equal(m2.startTime, 2, 'P2 deve iniciar em t=2');
+  assert.equal(m2.completionTime, 4, 'P2 deve finalizar em t=4');
+  assert.equal(m1.completionTime, 10, 'P1 deve finalizar em t=10');
+  assert.equal(result.contextSwitches, 2, 'Deve haver 2 trocas de contexto');
+
+  console.log('✅ Prioridade Preemptiva: OK');
+}
+
+// 8. Teste Round-Robin
+{
+  const inputs: ProcessInput[] = [
+    { id: 'P1', order: 1, arrivalTime: 0, duration: 5, staticPriority: 1 },
+    { id: 'P2', order: 2, arrivalTime: 0, duration: 3, staticPriority: 2 },
+  ];
+
+  const config = {
+    quantum: 2,
+    aging: 1,
+  };
+
+  const result = runRoundRobin(inputs, config);
+
+  const m1 = result.metrics.find((m) => m.id === 'P1')!;
+  const m2 = result.metrics.find((m) => m.id === 'P2')!;
+
+  assert.equal(m1.completionTime, 8, 'P1 deve finalizar em t=8');
+  assert.equal(m2.completionTime, 7, 'P2 deve finalizar em t=7');
+  assert.equal(result.contextSwitches, 4, 'Deve haver 4 trocas de contexto');
+
+  console.log('✅ Round-Robin: OK');
+}
+
+// 9. Teste Round-Robin com Prioridade e Aging
+{
+  const inputs: ProcessInput[] = [
+    { id: 'P1', order: 1, arrivalTime: 0, duration: 6, staticPriority: 1 },
+    { id: 'P2', order: 2, arrivalTime: 0, duration: 4, staticPriority: 2 },
+    { id: 'P3', order: 3, arrivalTime: 1, duration: 2, staticPriority: 3 },
+  ];
+
+  const config = {
+    quantum: 2,
+    aging: 1,
+  };
+
+  const result = runRoundRobinAging(inputs, config);
+
+  assert.equal(result.metrics.length, 3, 'Deve haver métricas para os 3 processos');
+  assert.ok(result.timeline.length > 0, 'Timeline deve ser gerada');
+
+  console.log('✅ Round-Robin + Aging: OK');
+}
+
+// 10. Teste de CPU Ociosa (Idle Time)
 {
   // P1 chega em 2 com duração 2
   const inputs: ProcessInput[] = [
@@ -133,12 +219,13 @@ console.log('🧪 Iniciando testes unitários do Escalonador...\n');
   console.log('✅ CPU Ociosa (Idle): OK');
 }
 
-// 7. Teste da função de despacho simulate()
+// 11. Teste da função de despacho simulate()
 {
   const inputs: ProcessInput[] = [
     { id: 'P1', order: 1, arrivalTime: 0, duration: 4, staticPriority: 1 },
-    { id: 'P2', order: 2, arrivalTime: 1, duration: 2, staticPriority: 1 },
+    { id: 'P2', order: 2, arrivalTime: 1, duration: 2, staticPriority: 2 },
   ];
+
   const cfg = { quantum: 2, aging: 1 };
 
   const fcfsSim = simulate(inputs, cfg, 'FCFS');
@@ -150,8 +237,33 @@ console.log('🧪 Iniciando testes unitários do Escalonador...\n');
   const srtfSim = simulate(inputs, cfg, 'SRTF');
   assert.equal(srtfSim.algorithmName, 'Shortest Remaining Time First (SRTF)');
 
+    const ppSim = simulate(inputs, cfg, 'PP');
+  assert.equal(
+    ppSim.algorithmName,
+    'Prioridade com Preempção (PRIOp)'
+  );
+
+  const pnpSim = simulate(inputs, cfg, 'PNP');
+  assert.equal(
+    pnpSim.algorithmName,
+    'Prioridade sem Preempção (PRIOc)'
+  );
+
+  const rrSim = simulate(inputs, cfg, 'RR');
+  assert.equal(
+    rrSim.algorithmName,
+    'Round-Robin (RR)'
+  );
+
+  const rraSim = simulate(inputs, cfg, 'RRA');
+  assert.equal(
+    rraSim.algorithmName,
+    'Round-Robin com Prioridade e Envelhecimento'
+  );
+
   assert.throws(() => simulate(inputs, cfg, 'UNKNOWN_ALGO'), /não suportado/);
-  console.log('✅ Função simulate() [FCFS, SJF, SRTF]: OK');
+
+  console.log('✅ Função simulate() [FCFS, SJF, SRTF, PP, PNP, RR, RRA]: OK');
 }
 
-console.log('\n🎉 Todos os testes passaram com sucesso!');
+console.log('\n Todos os testes passaram com sucesso!');
