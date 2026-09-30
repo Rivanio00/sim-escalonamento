@@ -1,12 +1,14 @@
+import {
+  runFCFS,
+  runSJF,
+  runSRTF,
+  runPriorityPreemptive,
+  runPriorityNonPreemptive,
+  runRoundRobin,
+  runRoundRobinAging,
+} from './schedulers.ts';
 import assert from 'node:assert/strict';
 import { parseInput, parseConfig, parseProcessInput } from './parser.ts';
-import { runFCFS } from './algorithms/fcfs.ts';
-import { runSJF } from './algorithms/sjf.ts';
-import { runSRTF } from './algorithms/srtf.ts';
-import { runPriorityPreemptive } from './algorithms/priorityPreemptive.ts';
-import { runPriorityNonPreemptive } from './algorithms/priorityNonPreemptive.ts';
-import { runRoundRobin } from './algorithms/roundRobin.ts';
-import { runRoundRobinAging } from './algorithms/roundRobinAging.ts';
 import { simulate } from './simulate.ts';
 import type { ProcessInput } from './types.ts';
 

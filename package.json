@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node src/core/test-gabarito.ts"
+    "start": "node src/core/cli.ts",
+    "test": "node src/core/test.ts && node src/core/test-gabarito.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "dependencies": {
     "react": "^19.2.8",
