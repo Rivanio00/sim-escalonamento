@@ -72,6 +72,24 @@ chegada mais prioritária espera o fim do quantum.
 - **Métricas:** tempo de vida `tt = completionTime - arrivalTime`; tempo de espera
   `tw = tt - duration`; tempo de resposta `= startTime - arrivalTime`.
 
+## Validação da entrada
+
+O parser recusa a entrada em vez de adivinhar, sempre citando o número da linha:
+
+- os três campos do processo têm de ser **inteiros** — a simulação avança de segundo
+  em segundo, então uma duração fracionária faria o tempo restante nunca chegar a zero;
+- `chegada >= 0`, `duracao > 0`, `prioridade >= 0`;
+- `quantum >= 1` — um quantum 0 nunca expiraria, e o Round-Robin viraria FCFS em
+  silêncio — e `aging >= 0`;
+- linha com número de colunas diferente de 3 (fora as de configuração) é erro.
+
+Comentários (`#` ou `//`) valem da marca até o fim da linha, esteja a linha inteira
+comentada ou só com uma observação depois dos números.
+
+Esses erros são `InputError` (`src/core/parser.ts`). A CLI mostra apenas a mensagem
+deles; qualquer outro erro sobe com o stack trace, para não esconder defeito nosso
+atrás de uma mensagem amigável.
+
 ## Pontos a confirmar com o professor
 
 - No FCFS, quando dois processos chegam no mesmo instante, a regra de desempate (ii)

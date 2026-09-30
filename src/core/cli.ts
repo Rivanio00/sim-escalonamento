@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as process from 'node:process';
-import { parseInput } from './parser.ts';
+import { InputError, parseInput } from './parser.ts';
 import { simulateAll } from './simulate.ts';
 import { formatStdoutReport } from './formatter.ts';
 
@@ -70,7 +70,11 @@ function main(): void {
 try {
   main();
 } catch (erro) {
-  // Erros do parser trazem o número da linha: mostra a mensagem, não o stack trace.
-  console.error(erro instanceof Error ? erro.message : String(erro));
-  process.exit(1);
+  // Entrada ruim do usuário: a mensagem já diz a linha, o stack trace só atrapalha.
+  if (erro instanceof InputError) {
+    console.error(erro.message);
+    process.exit(1);
+  }
+  // Qualquer outra coisa é bug nosso — deixa subir com o stack trace inteiro.
+  throw erro;
 }

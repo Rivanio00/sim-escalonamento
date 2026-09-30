@@ -8,7 +8,7 @@ import {
   runRoundRobinAging,
 } from './schedulers.ts';
 import assert from 'node:assert/strict';
-import { parseInput, parseConfig, parseProcessInput } from './parser.ts';
+import { InputError, parseInput, parseConfig, parseProcessInput } from './parser.ts';
 import { simulate } from './simulate.ts';
 import type { ProcessInput } from './types.ts';
 
@@ -285,7 +285,8 @@ console.log('Iniciando testes unitários do Escalonador...\n');
 
   // quantum 0 faria o RR nunca trocar de processo, virando FCFS em silêncio.
   assert.throws(() => parseInput('quantum: 0\n0 5 1'), /Quantum deve ser maior/);
-  assert.throws(() => parseInput('aging: -1\n0 5 1'), /Não entendi/); // '-1' não casa com \\d+
+  assert.throws(() => parseInput('aging: -1\n0 5 1'), /Aging não pode ser negativo/);
+  assert.throws(() => parseInput('quantum: -2\n0 5 1'), /Quantum deve ser maior/);
 
   // configDefined diz quais chaves o texto realmente trouxe, para a CLI e a UI
   // não sobrescreverem o que já estava definido com os valores padrão.
@@ -301,6 +302,14 @@ console.log('Iniciando testes unitários do Escalonador...\n');
 
   console.log('✅ Regressões do code review (inteiros, comentários inline, quantum, configDefined): OK');
 }
+
+  // lerEntrada deve devolver SÓ as chaves que o texto define, senão importar um
+  // arquivo com apenas `aging` zera o quantum que o usuário digitou na tela.
+  assert.deepEqual(parseInput('aging: 3\n0 5 2').configDefined, { quantum: false, aging: true });
+
+  // Erro de entrada é InputError; a CLI usa isso para não engolir bug de verdade.
+  assert.throws(() => parseInput('0 2.5 1'), InputError);
+  assert.throws(() => parseInput('quantum: 0\n0 5 1'), InputError);
 
 // 14. Diagrama vertical no formato do enunciado ("0- 1"), inclusive em simulações curtas
 {

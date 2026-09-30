@@ -55,10 +55,12 @@ function ProcessPanel({ processes, setProcesses, setConfig }) {
     try {
       const { processes: lidos, config } = lerEntrada(texto);
       if (lidos.length > 0) setProcesses(lidos);
-      if (config && setConfig) setConfig(config);
+      if (config && setConfig) setConfig((atual) => ({ ...atual, ...config }));
       const partes = [];
       if (lidos.length > 0) partes.push(`${lidos.length} processo(s) importado(s) (a lista anterior foi substituída)`);
-      if (config) partes.push(`quantum ${config.quantum}, aging ${config.aging}`);
+      if (config) {
+        partes.push(Object.entries(config).map(([c, v]) => `${c} ${v}`).join(', '));
+      }
       setAviso(partes.join('; ') + '.');
       setErroTexto('');
       setColando(false);

@@ -3,6 +3,18 @@ import type { Config, ParsedInput, ProcessInput } from './types.ts';
 export const DEFAULT_CONFIG: Config = { quantum: 2, aging: 1 };
 
 /**
+ * Erro de entrada do usuário (sintaxe ou valor fora de faixa), sempre com o
+ * número da linha. A CLI mostra só a mensagem destes; qualquer outro erro é bug
+ * nosso e sobe com o stack trace inteiro.
+ */
+export class InputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InputError';
+  }
+}
+
+/**
  * Lê o arquivo de entrada do simulador.
  *
  * Linhas em branco e comentários (`#` ou `//`) são ignorados. O quantum e o aging
@@ -27,10 +39,10 @@ export function parseInput(rawContent: string): ParsedInput {
   const setConfig = (key: 'quantum' | 'aging', value: number, where: string) => {
     // quantum 0 faria o Round-Robin nunca trocar de processo, virando FCFS em silêncio
     if (key === 'quantum' && value < 1) {
-      throw new Error(`Quantum deve ser maior ou igual a 1 na ${where}.`);
+      throw new InputError(`Quantum deve ser maior ou igual a 1 na ${where}.`);
     }
     if (key === 'aging' && value < 0) {
-      throw new Error(`Aging não pode ser negativo na ${where}.`);
+      throw new InputError(`Aging não pode ser negativo na ${where}.`);
     }
     config[key] = value;
     defined[key] = true;
@@ -47,7 +59,7 @@ export function parseInput(rawContent: string): ParsedInput {
     }
 
     // Forma 1: chave-valor ("quantum: 2", "aging = 1", "quantum 2")
-    const keyValue = line.match(/^(quantum|aging)\s*[:=\s]\s*(\d+)$/i);
+    const keyValue = line.match(/^(quantum|aging)\s*[:=\s]\s*(-?\d+)$/i);
     if (keyValue) {
       setConfig(keyValue[1].toLowerCase() as 'quantum' | 'aging', Number(keyValue[2]), where);
       return;
@@ -58,7 +70,7 @@ export function parseInput(rawContent: string): ParsedInput {
     if (numbers.some((n) => !Number.isInteger(n))) {
       // Inteiro não é capricho: a simulação avança de segundo em segundo, e uma
       // duração fracionária faria o tempo restante nunca chegar a zero.
-      throw new Error(`Não entendi a ${where}. Esperado "quantum: N", "aging: N" ou três inteiros.`);
+      throw new InputError(`Não entendi a ${where}. Esperado "quantum: N", "aging: N" ou três inteiros.`);
     }
 
     // Forma 2: cabeçalho numérico antes dos processos — "2 1", ou "2" e "1" em linhas separadas
@@ -76,18 +88,18 @@ export function parseInput(rawContent: string): ParsedInput {
 
     // Processos: exatamente três inteiros
     if (tokens.length !== 3) {
-      throw new Error(`Esperava 3 valores (chegada, duração, prioridade) na ${where}.`);
+      throw new InputError(`Esperava 3 valores (chegada, duração, prioridade) na ${where}.`);
     }
 
     const [arrivalTime, duration, staticPriority] = numbers;
     if (arrivalTime < 0) {
-      throw new Error(`Instante de criação não pode ser negativo na ${where}.`);
+      throw new InputError(`Instante de criação não pode ser negativo na ${where}.`);
     }
     if (duration <= 0) {
-      throw new Error(`Duração deve ser maior que zero na ${where}.`);
+      throw new InputError(`Duração deve ser maior que zero na ${where}.`);
     }
     if (staticPriority < 0) {
-      throw new Error(`Prioridade estática não pode ser negativa na ${where}.`);
+      throw new InputError(`Prioridade estática não pode ser negativa na ${where}.`);
     }
 
     const order = processes.length + 1;

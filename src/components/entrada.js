@@ -29,13 +29,21 @@ export function validarProcessos(lista) {
 
 /**
  * Lê um texto no formato do projeto (o mesmo da CLI e do samples/entrada.txt).
- * Devolve { processes, config }, com config em null quando o texto não define
- * quantum nem aging — assim a tela preserva o que o usuário já havia digitado.
+ *
+ * Devolve { processes, config }. `config` traz APENAS as chaves que o texto
+ * define — é null se não define nenhuma. Quem chama deve mesclar sobre a
+ * configuração atual (`{ ...atual, ...config }`), nunca substituir: um arquivo
+ * que só traz `aging` não pode zerar o quantum que o usuário digitou.
+ *
  * Lança Error com mensagem legível (e número da linha) se a entrada for inválida.
  */
 export function lerEntrada(texto) {
   const { processes, config, configDefined } = parseInput(texto);
-  const temConfig = configDefined.quantum || configDefined.aging;
+
+  const lida = {};
+  if (configDefined.quantum) lida.quantum = config.quantum;
+  if (configDefined.aging) lida.aging = config.aging;
+  const temConfig = Object.keys(lida).length > 0;
 
   const lidos = processes.map((p) => ({
     id: p.id,
@@ -51,7 +59,7 @@ export function lerEntrada(texto) {
     );
   }
 
-  return { processes: lidos, config: temConfig ? config : null };
+  return { processes: lidos, config: temConfig ? lida : null };
 }
 
 /** Converte a lista da tela para o formato que o motor de simulação espera. */

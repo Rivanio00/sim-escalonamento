@@ -6,9 +6,9 @@ const COL_WIDTH = 4; // largura de cada coluna de processo ("P1  ", "##  ", "-- 
  * Gera o diagrama vertical de execução no formato pedido na especificação:
  *
  *   tempo  P1  P2  P3  P4
- *   0- 1  --  ##
- *   1- 2  --  ##  --
- *   2- 3  ##      --
+ *    0- 1  --  ##
+ *    1- 2  --  ##  --
+ *    2- 3  ##      --
  *
  * '##' = usando o processador, '--' = pronto esperando, vazio = não existe (ainda)
  * ou já terminou.

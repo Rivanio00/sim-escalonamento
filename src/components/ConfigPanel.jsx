@@ -18,8 +18,12 @@ function ConfigPanel({ config, setConfig, setProcesses }) {
       const { processes, config: lida } = lerEntrada(await arquivo.text());
       const partes = [];
       if (lida) {
-        setConfig(lida);
-        partes.push(`quantum ${lida.quantum}, aging ${lida.aging}`);
+        setConfig((atual) => ({ ...atual, ...lida }));
+        partes.push(
+          Object.entries(lida)
+            .map(([chave, valor]) => `${chave} ${valor}`)
+            .join(', ')
+        );
       }
       if (processes.length > 0 && setProcesses) {
         setProcesses(processes);
