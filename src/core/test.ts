@@ -1,13 +1,16 @@
+import {
+  runFCFS,
+  runSJF,
+  runSRTF,
+  runPriorityPreemptive,
+  runPriorityNonPreemptive,
+  runRoundRobin,
+  runRoundRobinAging,
+} from './schedulers.ts';
 import assert from 'node:assert/strict';
-import { parseInput, parseConfig, parseProcessInput } from './parser.ts';
-import { runFCFS } from './algorithms/fcfs.ts';
-import { runSJF } from './algorithms/sjf.ts';
-import { runSRTF } from './algorithms/srtf.ts';
-import { runPriorityPreemptive } from './algorithms/priorityPreemptive.ts';
-import { runPriorityNonPreemptive } from './algorithms/priorityNonPreemptive.ts';
-import { runRoundRobin } from './algorithms/roundRobin.ts';
-import { runRoundRobinAging } from './algorithms/roundRobinAging.ts';
+import { InputError, parseInput, parseConfig, parseProcessInput } from './parser.ts';
 import { simulate } from './simulate.ts';
+import { lerEntrada, paraMotor } from '../components/entrada.js';
 import type { ProcessInput } from './types.ts';
 
 console.log('Iniciando testes unitários do Escalonador...\n');
@@ -264,6 +267,87 @@ console.log('Iniciando testes unitários do Escalonador...\n');
   assert.throws(() => simulate(inputs, cfg, 'UNKNOWN_ALGO'), /não suportado/);
 
   console.log('✅ Função simulate() [FCFS, SJF, SRTF, PP, PNP, RR, RRA]: OK');
+}
+
+// 13. Regressões do code review do PR #1
+{
+  // Duração fracionária travava o motor em laço infinito (o tempo restante nunca
+  // chegava a zero). O parser agora exige inteiros nos três campos.
+  assert.throws(() => parseInput('0 2.5 1'), /três inteiros/, 'duração fracionária deve ser rejeitada');
+  assert.throws(() => parseInput('1.5 2 1'), /três inteiros/, 'chegada fracionária deve ser rejeitada');
+  assert.throws(() => parseInput('0 2 1.5'), /três inteiros/, 'prioridade fracionária deve ser rejeitada');
+
+  // Comentário no fim da linha: o README documenta, o parser precisa aceitar.
+  const comInline = parseInput('quantum: 2   # opcional\naging: 1  // idem\n0 5 2  # P1\n1 3 4');
+  assert.equal(comInline.config.quantum, 2);
+  assert.equal(comInline.config.aging, 1);
+  assert.equal(comInline.processes.length, 2);
+  assert.equal(comInline.processes[0].duration, 5);
+
+  // quantum 0 faria o RR nunca trocar de processo, virando FCFS em silêncio.
+  assert.throws(() => parseInput('quantum: 0\n0 5 1'), /Quantum deve ser maior/);
+  assert.throws(() => parseInput('aging: -1\n0 5 1'), /Aging não pode ser negativo/);
+  assert.throws(() => parseInput('quantum: -2\n0 5 1'), /Quantum deve ser maior/);
+
+  // configDefined diz quais chaves o texto realmente trouxe, para a CLI e a UI
+  // não sobrescreverem o que já estava definido com os valores padrão.
+  const semCfg = parseInput('0 5 2');
+  assert.deepEqual(semCfg.configDefined, { quantum: false, aging: false });
+  assert.equal(semCfg.config.quantum, 2, 'sem config explícita, usa o padrão');
+
+  const soAging = parseInput('aging: 3\n0 5 2');
+  assert.deepEqual(soAging.configDefined, { quantum: false, aging: true });
+
+  const ambos = parseInput('quantum: 4\naging: 3\n0 5 2');
+  assert.deepEqual(ambos.configDefined, { quantum: true, aging: true });
+
+  // Erro de entrada é InputError; a CLI usa isso para distinguir entrada ruim de
+  // bug nosso (só a mensagem dos primeiros é mostrada sem stack trace).
+  assert.throws(() => parseInput('0 2.5 1'), InputError);
+  assert.throws(() => parseInput('quantum: 0\n0 5 1'), InputError);
+
+  console.log('✅ Regressões do code review (inteiros, comentários inline, quantum, configDefined): OK');
+}
+
+// 14. lerEntrada (adaptador da interface) devolve só as chaves que o texto define
+{
+  // Se devolvesse o Config inteiro, importar um arquivo com apenas `aging` zeraria
+  // o quantum que o usuário digitou na tela, porque as chaves ausentes vêm
+  // preenchidas com DEFAULT_CONFIG.
+  const soAging = lerEntrada('aging: 3\n0 5 2');
+  assert.deepEqual(soAging.config, { aging: 3 }, 'config deve trazer só `aging`');
+  assert.equal('quantum' in soAging.config, false, 'não pode inventar um quantum');
+  const estadoDaTela = { quantum: 8, aging: 1 };
+  assert.deepEqual({ ...estadoDaTela, ...soAging.config }, { quantum: 8, aging: 3 },
+    'mesclar sobre o estado da tela preserva o quantum digitado');
+
+  const soQuantum = lerEntrada('quantum: 4\n0 5 2');
+  assert.deepEqual(soQuantum.config, { quantum: 4 });
+
+  const ambas = lerEntrada('quantum: 4\naging: 3\n0 5 2');
+  assert.deepEqual(ambas.config, { quantum: 4, aging: 3 });
+
+  // Sem configuração no texto, a tela não deve mexer no que já está lá.
+  assert.equal(lerEntrada('0 5 2').config, null);
+
+  // E a conversão para o formato do motor preserva os valores.
+  assert.deepEqual(paraMotor(soAging.processes), [
+    { id: 'P1', order: 1, arrivalTime: 0, duration: 5, staticPriority: 2 },
+  ]);
+
+  console.log('✅ lerEntrada / paraMotor (adaptador da interface): OK');
+}
+
+// 15. Diagrama vertical no formato do enunciado ("0- 1"), inclusive em simulações curtas
+{
+  const r = runFCFS([
+    { id: 'P1', order: 1, arrivalTime: 0, duration: 2, staticPriority: 1 },
+    { id: 'P2', order: 2, arrivalTime: 0, duration: 3, staticPriority: 1 },
+  ]);
+  const linhas = r.verticalDiagram.split('\n');
+  assert.equal(linhas[0], 'tempo  P1  P2');
+  assert.equal(linhas[1], ' 0- 1  ##  --', `esperado " 0- 1  ##  --", obtido "${linhas[1]}"`); // empate em t=0: regra (ii) escolhe P1 (2s)
+  console.log('✅ Diagrama vertical no formato do enunciado: OK');
 }
 
 console.log('\n Todos os testes passaram com sucesso!');

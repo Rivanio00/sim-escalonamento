@@ -1,23 +1,19 @@
-import type { ProcessInput } from './types.ts';
+import type { RuntimeProcess } from './types.ts';
 
-export interface RuntimeProcess {
-  input: ProcessInput;
-  id: string;
-  order: number;
-  arrivalTime: number;
-  duration: number;
-  remainingTime: number;
-  staticPriority: number;
-  currentPriority: number;
-  startTime: number | null;
-  completionTime: number | null;
-}
+// Reexportado por compatibilidade: RuntimeProcess mora em types.ts.
+export type { RuntimeProcess } from './types.ts';
 
 /**
- * Aplica as diretrizes de desempate estabelecidas no enunciado:
- * (i)  alocar o processo que já esteja com o processador, para evitar troca de contexto;
- * (ii) processo com menor tempo restante de processamento;
- * (iii) em último caso, desempate determinístico (ordem de criação/declaração P1 < P2).
+ * Aplica as diretrizes de desempate estabelecidas no enunciado, em ordem:
+ *
+ *   (i)   alocar o processo que já está com o processador, para evitar troca de contexto;
+ *   (ii)  processo com menor tempo restante de processamento;
+ *   (iii) em último caso, um critério determinístico — aqui, menor instante de chegada
+ *         e depois a ordem de declaração (P1 antes de P2).
+ *
+ * O enunciado diz "aleatório" em (iii); trocamos por um critério fixo para que a
+ * simulação seja reprodutível (mesma entrada => mesmo diagrama), o que é essencial
+ * para conferir o resultado contra o gabarito.
  */
 export function breakTie(
   candidates: RuntimeProcess[],
@@ -26,39 +22,31 @@ export function breakTie(
   if (candidates.length === 0) {
     throw new Error('Nenhum candidato fornecido para desempate.');
   }
-
   if (candidates.length === 1) {
     return candidates[0];
   }
 
-  // (i) Se o processo atualmente no processador está entre os empatados, mantém ele
-  if (currentlyRunningId !== null) {
-    const running = candidates.find((p) => p.id === currentlyRunningId);
-    if (running) {
-      return running;
-    }
+  // (i) quem já está na CPU tem preferência
+  const running = candidates.find((p) => p.id === currentlyRunningId);
+  if (running) {
+    return running;
   }
 
-  // (ii) Menor tempo restante de processamento
-  let minRemaining = Infinity;
-  for (const p of candidates) {
-    if (p.remainingTime < minRemaining) {
-      minRemaining = p.remainingTime;
-    }
-  }
-
+  // (ii) menor tempo restante de processamento
+  const minRemaining = Math.min(...candidates.map((p) => p.remainingTime));
   const byRemaining = candidates.filter((p) => p.remainingTime === minRemaining);
   if (byRemaining.length === 1) {
     return byRemaining[0];
   }
 
-  // (iii) Desempate por instante de chegada e ordem original de leitura
-  byRemaining.sort((a, b) => {
-    if (a.arrivalTime !== b.arrivalTime) {
-      return a.arrivalTime - b.arrivalTime;
-    }
-    return a.order - b.order;
-  });
-
-  return byRemaining[0];
+  // (iii) critério determinístico: chegada, depois ordem de declaração
+  return byRemaining.reduce((best, p) =>
+    p.arrivalTime !== best.arrivalTime
+      ? p.arrivalTime < best.arrivalTime
+        ? p
+        : best
+      : p.order < best.order
+        ? p
+        : best
+  );
 }

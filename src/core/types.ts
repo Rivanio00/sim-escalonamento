@@ -2,12 +2,30 @@
  * Tipos fundamentais para a simulação de escalonamento de processos (SO - UFC).
  */
 
+/** Um processo como ele aparece no arquivo de entrada. */
 export interface ProcessInput {
   id: string; // Ex: "P1", "P2"
   order: number; // Ordem de declaração (1-indexada)
   arrivalTime: number; // Instante de criação (>= 0)
   duration: number; // Duração em segundos (> 0)
-  staticPriority: number; // Prioridade estática (escala positiva)
+  staticPriority: number; // Prioridade estática (maior número = mais prioritário)
+}
+
+/**
+ * O mesmo processo durante a simulação: guarda o que muda com o tempo.
+ * O motor cria um destes por processo e nunca altera o ProcessInput original.
+ */
+export interface RuntimeProcess {
+  id: string;
+  order: number;
+  arrivalTime: number;
+  duration: number;
+  staticPriority: number;
+  remainingTime: number; // Quantos segundos ainda faltam executar
+  currentPriority: number; // Prioridade dinâmica (pd); só o RR com aging a altera
+  queueSeq: number; // Posição na fila FIFO; só o RR clássico a usa
+  startTime: number | null; // Primeiro segundo em que ganhou o processador
+  completionTime: number | null; // Instante em que terminou
 }
 
 export interface ProcessMetrics {
@@ -30,15 +48,23 @@ export interface Config {
 export interface ParsedInput {
   config: Config;
   processes: ProcessInput[];
+  /**
+   * Quais chaves de `config` o texto definiu explicitamente — o resto veio de
+   * DEFAULT_CONFIG. A interface usa isso para não sobrescrever o que o usuário
+   * digitou ao importar um arquivo sem configuração, e a CLI para mesclar um
+   * arquivo de config sem apagar o que a entrada já trazia.
+   */
+  configDefined: { quantum: boolean; aging: boolean };
 }
 
+/** '##' no diagrama, '--' na fila de prontos, vazio se não existe (ainda) */
 export type ProcessStateInSecond = 'RUNNING' | 'READY' | 'NONE';
 
+/** Snapshot de um segundo inteiro da simulação: o intervalo [timeStart, timeEnd). */
 export interface SecondState {
   timeStart: number;
   timeEnd: number;
-  runningProcessId: string | null;
-  // Estado de cada processo neste segundo: 'RUNNING' (##), 'READY' (--), ou 'NONE' (não criado ou já finalizado)
+  runningProcessId: string | null; // null = processador ocioso
   processStates: Record<string, ProcessStateInSecond>;
 }
 

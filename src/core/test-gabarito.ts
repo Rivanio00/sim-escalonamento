@@ -1,10 +1,12 @@
-import { runFCFS } from './algorithms/fcfs.ts';
-import { runSJF } from './algorithms/sjf.ts';
-import { runSRTF } from './algorithms/srtf.ts';
-import { runPriorityPreemptive } from './algorithms/priorityPreemptive.ts';
-import { runPriorityNonPreemptive } from './algorithms/priorityNonPreemptive.ts';
-import { runRoundRobin } from './algorithms/roundRobin.ts';
-import { runRoundRobinAging } from './algorithms/roundRobinAging.ts';
+import {
+  runFCFS,
+  runSJF,
+  runSRTF,
+  runPriorityPreemptive,
+  runPriorityNonPreemptive,
+  runRoundRobin,
+  runRoundRobinAging,
+} from './schedulers.ts';
 import type { ProcessInput } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -275,7 +277,7 @@ const casos: Caso[] = [
     },
     nota:
       'Gabarito depende da hipótese: maior número = maior prioridade e +aging a cada quantum ' +
-      'para quem espera na fila. Confirmar com o roundRobinAging.ts / professor.',
+      'para quem espera na fila. Confirmar com o schedulers.ts (roundRobinAging) / professor.',
   },
 ];
 
