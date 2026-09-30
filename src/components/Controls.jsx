@@ -1,19 +1,14 @@
 import React from 'react';
-// Importamos tudo do index do core para acessar as funções do motor
-import { 
-  parseInput, 
-  runFCFS, 
-  runSJF, 
-  runSRTF, 
-  runPriorityPreemptive, 
-  runPriorityNonPreemptive, 
-  runRoundRobin, 
-  runRoundRobinAging 
-} from '../core/index.ts';
+import { runFCFS } from '../core/algorithms/fcfs';
+import { runSJF } from '../core/algorithms/sjf';
+import { runSRTF } from '../core/algorithms/srtf';
+import { runPriorityPreemptive } from '../core/algorithms/priorityPreemptive';
+import { runPriorityNonPreemptive } from '../core/algorithms/priorityNonPreemptive';
+import { runRoundRobin } from '../core/algorithms/roundRobin';
+import { runRoundRobinAging } from '../core/algorithms/roundRobinAging';
 
 function Controls({ processes, setResult, algorithm, setAlgorithm, config, setConfig }) {
   
-  // Variáveis para controlar a exibição dos campos extras
   const isRoundRobin = algorithm.includes('RR');
   const hasAging = algorithm === 'RR_AGING';
 
@@ -24,16 +19,17 @@ function Controls({ processes, setResult, algorithm, setAlgorithm, config, setCo
     }
 
     try {
-      // 1. Converte o array da interface para a string que o seu motor espera
-      // Ex: "P1(chega=0, dur=5, prio=2) P2(chega=0, dur=2, prio=3)"
-      const textInput = processes.map(p => 
-        `${p.id}(chega=${p.chegada}, dur=${p.duracao}, prio=${p.prioridade})`
-      ).join(' ');
+      // 1. Constrói os objetos EXATAMENTE como o parser faria, 
+      // mas diretamente a partir dos dados do formulário do React.
+      const parsedProcesses = processes.map((p, index) => ({
+        id: p.id,
+        order: index + 1,
+        arrivalTime: Number(p.chegada),
+        duration: Number(p.duracao),
+        staticPriority: Number(p.prioridade)
+      }));
 
-      // 2. Usa o seu próprio parser para criar os objetos perfeitos
-      const { processes: parsedProcesses } = parseInput(textInput);
-
-      // 3. Executa o algoritmo escolhido
+      // 2. Executa o algoritmo escolhido com os objetos puros
       let simResult = null;
       switch (algorithm) {
         case 'FCFS': simResult = runFCFS(parsedProcesses); break;
@@ -46,12 +42,14 @@ function Controls({ processes, setResult, algorithm, setAlgorithm, config, setCo
         default: break;
       }
 
-      // 4. Salva o resultado no estado do App.jsx para o Gantt ler
+      console.log("DADOS GERADOS E PROCESSADOS COM SUCESSO:", simResult);
+
+      // 3. Salva o resultado no estado para o Gráfico renderizar
       setResult(simResult);
 
     } catch (error) {
       console.error("Erro na simulação:", error);
-      alert("Erro ao rodar a simulação. Verifique o console.");
+      alert("Erro ao rodar a simulação. Verifique a consola.");
     }
   };
 
@@ -77,7 +75,6 @@ function Controls({ processes, setResult, algorithm, setAlgorithm, config, setCo
           </select>
         </div>
 
-        {/* Aparece APENAS se for Round Robin ou RR_AGING */}
         {isRoundRobin && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Quantum</label>
@@ -90,7 +87,6 @@ function Controls({ processes, setResult, algorithm, setAlgorithm, config, setCo
           </div>
         )}
 
-        {/* Aparece APENAS se for RR_AGING */}
         {hasAging && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Aging</label>
