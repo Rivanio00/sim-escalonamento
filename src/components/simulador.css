@@ -1,0 +1,144 @@
+/* Tema escuro do simulador. Não depende de Tailwind.
+   Também neutraliza o CSS padrão do template do Vite (index.css). */
+
+:root {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --panel: #161b22;
+  --line: #262c36;
+  --line-2: #30363d;
+  --ink: #e6edf3;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --accent-ink: #0b1220;
+  --danger: #f85149;
+  --ok: #3fb950;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html body {
+  display: block;
+  place-items: initial;
+  min-width: 0;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+html body #root { width: 100%; max-width: none; margin: 0; padding: 0; text-align: left; }
+
+/* ---------- Estrutura ---------- */
+.app-header { padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.app-header h1 { margin: 0; font-size: 15px; font-weight: 650; }
+.app-main {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+  align-items: start;
+}
+.app-side, .app-results { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+@media (max-width: 900px) { .app-main { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Painéis ---------- */
+.panel, .rcard { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 12px 14px; }
+.panel-title { margin: 0 0 10px; font-size: 13px; font-weight: 650; }
+.muted { color: var(--muted); }
+.small { font-size: 11px; }
+
+/* ---------- Campos e botões ---------- */
+.input {
+  width: 100%;
+  padding: 7px 8px;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--ink);
+  font: inherit;
+}
+.input::placeholder { color: #6e7681; }
+textarea.input { min-height: 130px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+.input:focus-visible, .btn:focus-visible, .check input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field label { font-size: 11px; color: var(--muted); }
+.two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.three-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+
+.btn {
+  padding: 7px 12px;
+  background: #21262d;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn:hover { background: #2b323c; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.btn-primary:hover { background: #79b8ff; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+
+.msg-err { margin: 8px 0 0; color: var(--danger); font-size: 12px; white-space: pre-wrap; }
+.msg-ok { margin: 8px 0 0; color: var(--ok); font-size: 12px; }
+.hint { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
+
+/* ---------- Tabela de processos ---------- */
+.ptable { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ptable th { padding: 4px 6px; color: var(--muted); font-weight: 500; text-align: left; }
+.ptable td { padding: 6px; border-top: 1px solid var(--line); }
+.ptable td:last-child, .ptable th:last-child { text-align: right; }
+.dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 2px; }
+.btn-x {
+  width: 22px; height: 22px; padding: 0;
+  background: #21262d; border: 1px solid var(--line-2); border-radius: 4px;
+  color: var(--muted); font-size: 12px; line-height: 1; cursor: pointer;
+}
+.btn-x:hover { color: var(--danger); border-color: var(--danger); }
+.empty { padding: 12px; border: 1px dashed var(--line-2); border-radius: 6px; color: var(--muted); text-align: center; }
+
+/* ---------- Algoritmos ---------- */
+.algo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.check { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
+.check input { margin-top: 2px; accent-color: var(--accent); }
+.check.small { font-size: 11px; color: var(--muted); }
+
+/* ---------- Controles de execução ---------- */
+.runpanel { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ---------- Cards de resultado ---------- */
+.rcard-sub { margin-left: 8px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.rcard-body { display: flex; gap: 16px; }
+.rcard-chart { flex: 1; min-width: 0; overflow-x: auto; padding-bottom: 4px; }
+.rcard-metrics { flex: 0 0 190px; padding-left: 14px; border-left: 1px solid var(--line); }
+.metric { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; }
+.metric b { font-weight: 500; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) {
+  .rcard-body { flex-direction: column; }
+  .rcard-metrics { flex-basis: auto; padding: 8px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+}
+
+.chart { display: grid; gap: 4px 2px; align-items: center; }
+.plabel { font-size: 11px; color: var(--muted); }
+.cell { height: 18px; border-radius: 2px; }
+.cell-future { background: rgba(255, 255, 255, 0.035); }
+.cell-ready { background: repeating-linear-gradient(45deg, #2d343f, #2d343f 3px, #1b2028 3px, #1b2028 6px); }
+.axis { font-size: 10px; text-align: center; color: var(--muted); font-variant-numeric: tabular-nums; }
+.axis-now { color: var(--ink); font-weight: 700; }
+
+.more { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+.more summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.mtable { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.mtable th, .mtable td { padding: 4px 8px; text-align: center; border-bottom: 1px solid var(--line); }
+.mtable th { color: var(--muted); font-weight: 500; }
+.mtable th:first-child, .mtable td:first-child { text-align: left; }
+.diagram {
+  max-height: 280px; overflow: auto; margin: 10px 0 0; padding: 10px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.35;
+}

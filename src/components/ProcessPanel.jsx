@@ -1,95 +1,153 @@
 import React, { useState } from 'react';
+import { corDoProcesso } from './cores';
+import { lerEntrada, validarProcessos } from './entrada';
+import './simulador.css';
 
-function ProcessPanel({ processes, setProcesses }) {
-  const [arrival, setArrival] = useState(0);
-  const [duration, setDuration] = useState(1);
-  const [priority, setPriority] = useState(1);
+// Exemplo do enunciado
+const EXEMPLO = `quantum: 2
+aging: 1
 
-  const handleAddProcess = (e) => {
+0 5 2
+0 2 3
+1 4 1
+3 3 4`;
+
+function ProcessPanel({ processes, setProcesses, setConfig }) {
+  const [form, setForm] = useState({ chegada: '', duracao: '', prioridade: '' });
+  const [erro, setErro] = useState('');
+  const [colando, setColando] = useState(false);
+  const [texto, setTexto] = useState('');
+  const [erroTexto, setErroTexto] = useState('');
+  const [aviso, setAviso] = useState('');
+
+  const campo = (nome) => (e) => setForm({ ...form, [nome]: e.target.value });
+
+  const adicionar = (e) => {
     e.preventDefault();
-    const newProcess = {
+    if (form.chegada === '' || form.duracao === '' || form.prioridade === '') {
+      setErro('Preencha chegada, duração e prioridade.');
+      return;
+    }
+    const novo = {
       id: `P${processes.length + 1}`,
-      chegada: Number(arrival),
-      duracao: Number(duration),
-      prioridade: Number(priority),
+      chegada: Number(form.chegada),
+      duracao: Number(form.duracao),
+      prioridade: Number(form.prioridade),
     };
-    setProcesses([...processes, newProcess]);
-    setArrival(Number(arrival) + 1); 
+    const erros = validarProcessos([novo]);
+    if (erros.length > 0) {
+      setErro(erros.join('\n'));
+      return;
+    }
+    setProcesses([...processes, novo]);
+    setForm({ chegada: '', duracao: '', prioridade: '' });
+    setErro('');
+    setAviso('');
   };
 
-  const handleClear = () => setProcesses([]);
+  // Remove e renumera (P1..Pn), igual ao que o parser faria com a lista restante
+  const remover = (id) => {
+    setProcesses(processes.filter((p) => p.id !== id).map((p, i) => ({ ...p, id: `P${i + 1}` })));
+    setAviso('');
+  };
+
+  const importar = () => {
+    try {
+      const { processes: lidos, config } = lerEntrada(texto);
+      if (lidos.length > 0) setProcesses(lidos);
+      if (config && setConfig) setConfig(config);
+      const partes = [];
+      if (lidos.length > 0) partes.push(`${lidos.length} processo(s) importado(s) (a lista anterior foi substituída)`);
+      if (config) partes.push(`quantum ${config.quantum}, aging ${config.aging}`);
+      setAviso(partes.join('; ') + '.');
+      setErroTexto('');
+      setColando(false);
+      setTexto('');
+    } catch (err) {
+      setErroTexto(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const cancelar = () => {
+    setColando(false);
+    setTexto('');
+    setErroTexto('');
+  };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h2 className="text-lg font-semibold mb-4 border-b pb-2">Entrada de Processos</h2>
-      
-      <form onSubmit={handleAddProcess} className="flex flex-wrap gap-4 items-end mb-6">
-        <div>
-          <label className="block text-sm text-gray-600 mb-1">Chegada (t)</label>
-          <input 
-            type="number" min="0" required
-            className="w-24 p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            value={arrival} onChange={(e) => setArrival(e.target.value)} 
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-600 mb-1">Duração</label>
-          <input 
-            type="number" min="1" required
-            className="w-24 p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            value={duration} onChange={(e) => setDuration(e.target.value)} 
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-600 mb-1">Prioridade</label>
-          <input 
-            type="number" min="1" required
-            className="w-24 p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            value={priority} onChange={(e) => setPriority(e.target.value)} 
-          />
-        </div>
-        <button 
-          type="submit" 
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-        >
-          + Adicionar
-        </button>
-      </form>
+    <div className="panel">
+      <h2 className="panel-title">Processos</h2>
 
       {processes.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="p-3">Processo</th>
-                <th className="p-3">Chegada</th>
-                <th className="p-3">Duração</th>
-                <th className="p-3">Prioridade</th>
+        <table className="ptable">
+          <thead>
+            <tr>
+              <th>Id</th>
+              <th>Chegada</th>
+              <th>Duração</th>
+              <th>Prior.</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {processes.map((p) => (
+              <tr key={p.id}>
+                <td>
+                  <i className="dot" style={{ background: corDoProcesso(p.id) }} />
+                  {p.id}
+                </td>
+                <td>{p.chegada}</td>
+                <td>{p.duracao}</td>
+                <td>{p.prioridade}</td>
+                <td>
+                  <button type="button" className="btn-x" onClick={() => remover(p.id)} aria-label={`Remover ${p.id}`}>
+                    ×
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {processes.map((p, idx) => (
-                <tr key={idx} className="border-b hover:bg-gray-50">
-                  <td className="p-3 font-medium">{p.id}</td>
-                  <td className="p-3">{p.chegada}</td>
-                  <td className="p-3">{p.duracao}</td>
-                  <td className="p-3">{p.prioridade}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <button 
-            onClick={handleClear} 
-            className="mt-4 text-red-600 text-sm hover:underline"
-          >
-            Limpar todos os processos
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="empty">Nenhum processo. Adicione um abaixo ou cole uma entrada.</p>
+      )}
+
+      <form onSubmit={adicionar} style={{ marginTop: 10 }}>
+        <div className="three-cols">
+          <input className="input" type="number" min="0" placeholder="chegada" aria-label="Chegada" value={form.chegada} onChange={campo('chegada')} />
+          <input className="input" type="number" min="1" placeholder="duração" aria-label="Duração" value={form.duracao} onChange={campo('duracao')} />
+          <input className="input" type="number" min="1" placeholder="prior." aria-label="Prioridade" value={form.prioridade} onChange={campo('prioridade')} />
+        </div>
+        <div className="actions">
+          <button type="submit" className="btn btn-primary">Adicionar</button>
+          <button type="button" className="btn" onClick={() => setColando(!colando)}>
+            Colar entrada
           </button>
         </div>
-      ) : (
-        <p className="text-gray-400 text-sm text-center py-4 border border-dashed rounded">
-          Nenhum processo adicionado.
-        </p>
+      </form>
+      {erro && <p className="msg-err" role="alert">{erro}</p>}
+
+      {colando && (
+        <div style={{ marginTop: 10 }}>
+          <textarea
+            className="input"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder={'quantum: 2\naging: 1\n\n0 5 2\n0 2 3'}
+            aria-label="Texto de entrada"
+            spellCheck={false}
+            autoFocus
+          />
+          <div className="actions">
+            <button type="button" className="btn btn-primary" onClick={importar} disabled={!texto.trim()}>Importar</button>
+            <button type="button" className="btn" onClick={() => setTexto(EXEMPLO)}>Usar exemplo</button>
+            <button type="button" className="btn" onClick={cancelar}>Cancelar</button>
+          </div>
+          <p className="hint">Uma linha por processo: chegada duração prioridade. Quantum e aging são opcionais.</p>
+          {erroTexto && <p className="msg-err" role="alert">{erroTexto}</p>}
+        </div>
       )}
+      {aviso && <p className="msg-ok" role="status">{aviso}</p>}
     </div>
   );
 }
