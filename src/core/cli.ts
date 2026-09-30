@@ -15,12 +15,12 @@ Sem argumentos, carrega samples/entrada.txt.`;
  * pasta, sem permissão de leitura, ...) em InputError — do ponto de vista de
  * quem usa a CLI, isso é entrada errada, não defeito do programa.
  */
-function lerArquivo(caminho: string): string {
+function lerArquivo(caminho: string | number, nome = String(caminho)): string {
   try {
     return fs.readFileSync(caminho, 'utf-8');
   } catch (erro) {
     const motivo = erro instanceof Error ? erro.message : String(erro);
-    throw new InputError(`Não consegui ler "${caminho}": ${motivo}\n\n${USAGE}`);
+    throw new InputError(`Não consegui ler ${nome}: ${motivo}\n\n${USAGE}`);
   }
 }
 
@@ -31,20 +31,23 @@ function readRawInput(args: string[]): string {
       console.error(`Arquivo de entrada não encontrado: ${args[0]}\n\n${USAGE}`);
       process.exit(1);
     }
-    return lerArquivo(args[0]);
+    return lerArquivo(args[0], `"${args[0]}"`);
   }
 
   if (!process.stdin.isTTY) {
-    try {
-      return fs.readFileSync(0, 'utf-8');
-    } catch {
-      /* stdin vazio: cai no sample abaixo */
+    // Falha de leitura vira erro: cair no sample em silêncio faria o programa
+    // relatar a simulação do exemplo como se fosse a entrada do usuário.
+    const daEntradaPadrao = lerArquivo(0, 'a entrada padrão (stdin)');
+    // Já um stdin vazio não é erro — segue para o sample, como quando não se
+    // passa argumento nenhum.
+    if (daEntradaPadrao.trim()) {
+      return daEntradaPadrao;
     }
   }
 
   if (fs.existsSync('samples/entrada.txt')) {
     console.log('Nenhuma entrada fornecida. Carregando "samples/entrada.txt"...\n');
-    return lerArquivo('samples/entrada.txt');
+    return lerArquivo('samples/entrada.txt', '"samples/entrada.txt"');
   }
 
   console.error(USAGE);
@@ -62,7 +65,7 @@ function main(): void {
       console.error(`Arquivo de configuração não encontrado: ${args[1]}\n\n${USAGE}`);
       process.exit(1);
     }
-    const override = parseInput(lerArquivo(args[1]));
+    const override = parseInput(lerArquivo(args[1], `"${args[1]}"`));
     if (override.configDefined.quantum) config.quantum = override.config.quantum;
     if (override.configDefined.aging) config.aging = override.config.aging;
   }
