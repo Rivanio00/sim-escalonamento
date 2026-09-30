@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as process from 'node:process';
-import { parseInput, parseConfig } from './parser.ts';
+import { parseInput } from './parser.ts';
 import { simulateAll } from './simulate.ts';
 import { formatStdoutReport } from './formatter.ts';
 
@@ -41,9 +41,16 @@ function main(): void {
   const args = process.argv.slice(2);
   const { config, processes } = parseInput(readRawInput(args));
 
-  // Um arquivo de config no 2º argumento sobrescreve o quantum/aging da entrada
+  // Um arquivo de config no 2º argumento sobrescreve o quantum/aging da entrada —
+  // mas só as chaves que ele realmente define, para não apagar o que a entrada trazia.
   if (args.length > 1) {
-    Object.assign(config, parseConfig(fs.readFileSync(args[1], 'utf-8')));
+    if (!fs.existsSync(args[1])) {
+      console.error(`Arquivo de configuração não encontrado: ${args[1]}\n\n${USAGE}`);
+      process.exit(1);
+    }
+    const override = parseInput(fs.readFileSync(args[1], 'utf-8'));
+    if (override.configDefined.quantum) config.quantum = override.config.quantum;
+    if (override.configDefined.aging) config.aging = override.config.aging;
   }
 
   if (processes.length === 0) {
@@ -60,4 +67,10 @@ function main(): void {
   }
 }
 
-main();
+try {
+  main();
+} catch (erro) {
+  // Erros do parser trazem o número da linha: mostra a mensagem, não o stack trace.
+  console.error(erro instanceof Error ? erro.message : String(erro));
+  process.exit(1);
+}

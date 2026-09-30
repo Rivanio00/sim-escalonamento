@@ -21,7 +21,9 @@ export function generateVerticalDiagram(processIds: string[], timeline: SecondSt
   // Alinha os números do intervalo pela quantidade de dígitos do último instante,
   // produzindo " 0- 1", " 9-10", "13-14" — todos com a mesma largura.
   const lastEnd = timeline[timeline.length - 1].timeEnd;
-  const digits = String(lastEnd).length;
+  // Mínimo de 2 para que simulações curtas ainda saiam no formato do enunciado
+  // (" 0- 1") em vez de "0-1".
+  const digits = Math.max(2, String(lastEnd).length);
   const timeLabel = (start: number, end: number) =>
     `${String(start).padStart(digits)}-${String(end).padStart(digits)}`;
   const timeWidth = Math.max('tempo'.length, timeLabel(lastEnd - 1, lastEnd).length);

@@ -24,41 +24,52 @@ export function parseInput(rawContent: string): ParsedInput {
   const defined = { quantum: false, aging: false };
   const processes: ProcessInput[] = [];
 
-  const setConfig = (key: 'quantum' | 'aging', value: number) => {
+  const setConfig = (key: 'quantum' | 'aging', value: number, where: string) => {
+    // quantum 0 faria o Round-Robin nunca trocar de processo, virando FCFS em silêncio
+    if (key === 'quantum' && value < 1) {
+      throw new Error(`Quantum deve ser maior ou igual a 1 na ${where}.`);
+    }
+    if (key === 'aging' && value < 0) {
+      throw new Error(`Aging não pode ser negativo na ${where}.`);
+    }
     config[key] = value;
     defined[key] = true;
   };
 
   rawContent.split(/\r?\n/).forEach((rawLine, index) => {
-    const line = rawLine.trim();
-    const where = `linha ${index + 1}: "${line}"`;
+    // Um comentário (`#` ou `//`) vale da marca até o fim da linha, esteja ela
+    // inteira comentada ou só com uma observação depois dos números.
+    const line = rawLine.split(/#|\/\//)[0].trim();
+    const where = `linha ${index + 1}: "${rawLine.trim()}"`;
 
-    if (!line || line.startsWith('#') || line.startsWith('//')) {
+    if (!line) {
       return;
     }
 
     // Forma 1: chave-valor ("quantum: 2", "aging = 1", "quantum 2")
     const keyValue = line.match(/^(quantum|aging)\s*[:=\s]\s*(\d+)$/i);
     if (keyValue) {
-      setConfig(keyValue[1].toLowerCase() as 'quantum' | 'aging', Number(keyValue[2]));
+      setConfig(keyValue[1].toLowerCase() as 'quantum' | 'aging', Number(keyValue[2]), where);
       return;
     }
 
     const tokens = line.split(/\s+/);
     const numbers = tokens.map(Number);
-    if (numbers.some(Number.isNaN)) {
+    if (numbers.some((n) => !Number.isInteger(n))) {
+      // Inteiro não é capricho: a simulação avança de segundo em segundo, e uma
+      // duração fracionária faria o tempo restante nunca chegar a zero.
       throw new Error(`Não entendi a ${where}. Esperado "quantum: N", "aging: N" ou três inteiros.`);
     }
 
     // Forma 2: cabeçalho numérico antes dos processos — "2 1", ou "2" e "1" em linhas separadas
     if (processes.length === 0 && tokens.length < 3) {
       if (tokens.length === 2 && !defined.quantum && !defined.aging) {
-        setConfig('quantum', numbers[0]);
-        setConfig('aging', numbers[1]);
+        setConfig('quantum', numbers[0], where);
+        setConfig('aging', numbers[1], where);
         return;
       }
       if (tokens.length === 1 && (!defined.quantum || !defined.aging)) {
-        setConfig(defined.quantum ? 'aging' : 'quantum', numbers[0]);
+        setConfig(defined.quantum ? 'aging' : 'quantum', numbers[0], where);
         return;
       }
     }
@@ -83,7 +94,7 @@ export function parseInput(rawContent: string): ParsedInput {
     processes.push({ id: `P${order}`, order, arrivalTime, duration, staticPriority });
   });
 
-  return { config, processes, configFromInput: defined.quantum || defined.aging };
+  return { config, processes, configDefined: { ...defined } };
 }
 
 /** Só a configuração (quantum e aging) do conteúdo informado. */

@@ -34,7 +34,7 @@ function App() {
     // Campo vazio ou inválido vira o mínimo permitido
     const cfg = {
       quantum: Math.max(1, Math.floor(Number(config.quantum)) || 1),
-      aging: Math.max(0, Number(config.aging) || 0),
+      aging: Math.max(0, Math.floor(Number(config.aging)) || 0),
     };
 
     const cards = ALGORITHMS.filter((a) => selecionados.includes(a.key)).map((a) => {

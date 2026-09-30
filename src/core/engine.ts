@@ -177,12 +177,12 @@ export function runSimulation(inputs: ProcessInput[], scheduler: Scheduler): Sim
       running.remainingTime -= 1;
       quantumUsed += 1;
 
-      if (running.remainingTime === 0) {
+      if (running.remainingTime <= 0) {
         running.completionTime = time + 1;
         finished += 1;
         running = null;
         quantumUsed = 0;
-      } else if (scheduler.quantum !== null && quantumUsed === scheduler.quantum) {
+      } else if (scheduler.quantum !== null && quantumUsed >= scheduler.quantum) {
         expiredLastSecond = running; // volta para a fila no próximo segundo (passo 2)
         running = null;
         quantumUsed = 0;

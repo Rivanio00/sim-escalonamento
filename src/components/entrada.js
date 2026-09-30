@@ -34,7 +34,8 @@ export function validarProcessos(lista) {
  * Lança Error com mensagem legível (e número da linha) se a entrada for inválida.
  */
 export function lerEntrada(texto) {
-  const { processes, config, configFromInput } = parseInput(texto);
+  const { processes, config, configDefined } = parseInput(texto);
+  const temConfig = configDefined.quantum || configDefined.aging;
 
   const lidos = processes.map((p) => ({
     id: p.id,
@@ -43,14 +44,14 @@ export function lerEntrada(texto) {
     prioridade: p.staticPriority,
   }));
 
-  if (lidos.length === 0 && !configFromInput) {
+  if (lidos.length === 0 && !temConfig) {
     throw new Error(
       'Nada reconhecido. Use uma linha por processo (chegada duração prioridade, ex.: 0 5 2) ' +
         'e, se quiser, quantum: 2 e aging: 1.'
     );
   }
 
-  return { processes: lidos, config: configFromInput ? config : null };
+  return { processes: lidos, config: temConfig ? config : null };
 }
 
 /** Converte a lista da tela para o formato que o motor de simulação espera. */
