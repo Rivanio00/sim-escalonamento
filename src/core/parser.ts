@@ -83,7 +83,7 @@ export function parseInput(rawContent: string): ParsedInput {
     processes.push({ id: `P${order}`, order, arrivalTime, duration, staticPriority });
   });
 
-  return { config, processes };
+  return { config, processes, configFromInput: defined.quantum || defined.aging };
 }
 
 /** Só a configuração (quantum e aging) do conteúdo informado. */

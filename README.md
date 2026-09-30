@@ -69,8 +69,31 @@ sim-escalonamento/
     │   ├── cli.ts          # linha de comando (npm start)
     │   ├── test.ts         # testes unitários
     │   └── test-gabarito.ts# casos com gabarito calculado à mão + invariantes
-    └── App.jsx             # interface web
+    ├── App.jsx             # interface web: monta os painéis e roda a simulação
+    ├── main.jsx
+    └── components/
+        ├── ProcessPanel.jsx   # tabela de processos, formulário e "colar entrada"
+        ├── ConfigPanel.jsx    # quantum, aging e carregar arquivo .txt
+        ├── AlgorithmPanel.jsx # seleção dos algoritmos (a lista vem do core)
+        ├── RunPanel.jsx       # Run step / Fast run / Reiniciar
+        ├── ResultCard.jsx     # um card por algoritmo: Gantt + métricas
+        ├── entrada.js         # conversão tela <-> motor e validação do formulário
+        ├── cores.js           # cor de cada processo
+        └── simulador.css      # tema escuro, CSS próprio (sem framework)
 ```
+
+### A interface
+
+`npm run dev` abre a tela em http://localhost:5173. Dá para montar a lista de processos
+à mão, colar uma entrada no mesmo formato da CLI ou carregar um `.txt`; escolher quantum
+e aging; marcar quantos algoritmos quiser; e avançar a execução segundo a segundo
+(**Run step**) ou até o fim (**Fast run**). Cada algoritmo marcado vira um card com o
+diagrama de Gantt colorido, as médias e, ao terminar, a tabela por processo e o mesmo
+diagrama vertical que a CLI imprime.
+
+A tela não tem lógica de escalonamento: ela lê a lista `ALGORITHMS` do core, chama
+`runSimulation` e desenha `result.timeline`. Não existe uma segunda lista de algoritmos
+para manter em sincronia.
 
 ### Como o motor está organizado
 
@@ -96,4 +119,5 @@ export const srtf: Scheduler = {
 ```
 
 Empates caem nas regras do enunciado, em `tieBreaker.ts`. Adicionar um algoritmo novo é
-escrever um objeto desses e registrá-lo em `ALGORITHMS` (`simulate.ts`).
+escrever um objeto desses e registrá-lo em `ALGORITHMS` (`simulate.ts`) — a CLI e a
+interface passam a oferecê-lo sozinhas.

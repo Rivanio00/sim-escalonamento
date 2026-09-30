@@ -48,6 +48,12 @@ export interface Config {
 export interface ParsedInput {
   config: Config;
   processes: ProcessInput[];
+  /**
+   * true se o texto definiu quantum e/ou aging explicitamente; false se `config`
+   * são só os valores padrão. A interface usa isso para não sobrescrever o que o
+   * usuário digitou ao importar um arquivo que não traz configuração.
+   */
+  configFromInput: boolean;
 }
 
 /** '##' no diagrama, '--' na fila de prontos, vazio se não existe (ainda) */

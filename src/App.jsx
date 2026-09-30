@@ -1,122 +1,118 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useMemo, useState } from 'react';
+import './components/simulador.css';
+import ProcessPanel from './components/ProcessPanel';
+import ConfigPanel from './components/ConfigPanel';
+import AlgorithmPanel from './components/AlgorithmPanel';
+import RunPanel from './components/RunPanel';
+import ResultCard from './components/ResultCard';
+import { ALGORITHMS } from './core/simulate.ts';
+import { runSimulation } from './core/engine.ts';
+import { paraMotor, validarProcessos } from './components/entrada';
+
+// Processos iniciais (exemplo)
+const PROCESSOS_INICIAIS = [
+  { id: 'P1', chegada: 0, duracao: 5, prioridade: 2 },
+  { id: 'P2', chegada: 0, duracao: 2, prioridade: 3 },
+  { id: 'P3', chegada: 1, duracao: 4, prioridade: 1 },
+  { id: 'P4', chegada: 3, duracao: 1, prioridade: 4 },
+  { id: 'P5', chegada: 5, duracao: 2, prioridade: 5 },
+];
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [processes, setProcesses] = useState(PROCESSOS_INICIAIS);
+  const [config, setConfig] = useState({ quantum: 2, aging: 1 });
+  const [selecionados, setSelecionados] = useState(['FCFS', 'RR']);
+  const [t, setT] = useState(0); // segundos já revelados
+  const [cardsRevelados, setCardsRevelados] = useState(null);
+
+  // Toda simulação é calculada de uma vez; o Run step apenas revela um segundo por vez.
+  const { cards, problemas } = useMemo(() => {
+    const problemas = validarProcessos(processes);
+    if (processes.length === 0 || problemas.length > 0) return { cards: [], problemas };
+
+    const entrada = paraMotor(processes);
+    // Campo vazio ou inválido vira o mínimo permitido
+    const cfg = {
+      quantum: Math.max(1, Math.floor(Number(config.quantum)) || 1),
+      aging: Math.max(0, Number(config.aging) || 0),
+    };
+
+    const cards = ALGORITHMS.filter((a) => selecionados.includes(a.key)).map((a) => {
+      const partes = [];
+      if (a.usesQuantum) partes.push(`quantum ${cfg.quantum}`);
+      if (a.usesAging) partes.push(`aging ${cfg.aging}`);
+      const subtitulo = partes.join(', ');
+
+      try {
+        const scheduler = a.build(cfg);
+        return { key: a.key, titulo: scheduler.name, subtitulo, result: runSimulation(entrada, scheduler) };
+      } catch (e) {
+        return { key: a.key, titulo: a.label, subtitulo, erro: e instanceof Error ? e.message : String(e) };
+      }
+    });
+
+    return { cards, problemas };
+  }, [processes, config, selecionados]);
+
+  // Qualquer mudança na entrada recalcula `cards` (nova identidade) e reinicia a
+  // execução. Ajustar o estado durante a renderização evita o render extra que um
+  // useEffect causaria — e o "t = 0" nunca aparece atrasado em um frame.
+  if (cardsRevelados !== cards) {
+    setCardsRevelados(cards);
+    setT(0);
+  }
+
+  const ids = processes.map((p) => p.id);
+  const eixo = Math.max(0, ...cards.map((c) => (c.result ? c.result.timeline.length : 0)));
+  const temResultado = eixo > 0;
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div>
+      <header className="app-header">
+        <h1>Simulador de escalonamento</h1>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="app-main">
+        <aside className="app-side">
+          <ProcessPanel processes={processes} setProcesses={setProcesses} setConfig={setConfig} />
+          <ConfigPanel config={config} setConfig={setConfig} setProcesses={setProcesses} />
+          <AlgorithmPanel selecionados={selecionados} setSelecionados={setSelecionados} />
+          <RunPanel
+            t={t}
+            total={eixo}
+            temResultado={temResultado}
+            onStep={() => setT((v) => Math.min(v + 1, eixo))}
+            onFast={() => setT(eixo)}
+            onReset={() => setT(0)}
+          />
+        </aside>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <section className="app-results">
+          {problemas.length > 0 && (
+            <div className="panel">
+              <p className="msg-err" style={{ margin: 0 }}>{problemas.join('\n')}</p>
+            </div>
+          )}
+          {processes.length === 0 && <p className="empty">Adicione ao menos um processo para simular.</p>}
+          {processes.length > 0 && problemas.length === 0 && selecionados.length === 0 && (
+            <p className="empty">Selecione ao menos um algoritmo.</p>
+          )}
+          {cards.map((c) => (
+            <ResultCard
+              key={c.key}
+              titulo={c.titulo}
+              subtitulo={c.subtitulo}
+              result={c.result}
+              erro={c.erro}
+              t={t}
+              eixo={eixo}
+              ids={ids}
+            />
+          ))}
+        </section>
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
