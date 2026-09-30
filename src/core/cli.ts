@@ -10,6 +10,20 @@ const USAGE = `Uso:
 
 Sem argumentos, carrega samples/entrada.txt.`;
 
+/**
+ * Lê um arquivo, convertendo as falhas do sistema de arquivos (caminho é uma
+ * pasta, sem permissão de leitura, ...) em InputError — do ponto de vista de
+ * quem usa a CLI, isso é entrada errada, não defeito do programa.
+ */
+function lerArquivo(caminho: string): string {
+  try {
+    return fs.readFileSync(caminho, 'utf-8');
+  } catch (erro) {
+    const motivo = erro instanceof Error ? erro.message : String(erro);
+    throw new InputError(`Não consegui ler "${caminho}": ${motivo}\n\n${USAGE}`);
+  }
+}
+
 /** Lê o conteúdo da entrada: argumento de linha de comando, stdin redirecionado ou o sample. */
 function readRawInput(args: string[]): string {
   if (args.length > 0) {
@@ -17,7 +31,7 @@ function readRawInput(args: string[]): string {
       console.error(`Arquivo de entrada não encontrado: ${args[0]}\n\n${USAGE}`);
       process.exit(1);
     }
-    return fs.readFileSync(args[0], 'utf-8');
+    return lerArquivo(args[0]);
   }
 
   if (!process.stdin.isTTY) {
@@ -30,7 +44,7 @@ function readRawInput(args: string[]): string {
 
   if (fs.existsSync('samples/entrada.txt')) {
     console.log('Nenhuma entrada fornecida. Carregando "samples/entrada.txt"...\n');
-    return fs.readFileSync('samples/entrada.txt', 'utf-8');
+    return lerArquivo('samples/entrada.txt');
   }
 
   console.error(USAGE);
@@ -48,7 +62,7 @@ function main(): void {
       console.error(`Arquivo de configuração não encontrado: ${args[1]}\n\n${USAGE}`);
       process.exit(1);
     }
-    const override = parseInput(fs.readFileSync(args[1], 'utf-8'));
+    const override = parseInput(lerArquivo(args[1]));
     if (override.configDefined.quantum) config.quantum = override.config.quantum;
     if (override.configDefined.aging) config.aging = override.config.aging;
   }

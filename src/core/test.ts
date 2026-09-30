@@ -10,6 +10,7 @@ import {
 import assert from 'node:assert/strict';
 import { InputError, parseInput, parseConfig, parseProcessInput } from './parser.ts';
 import { simulate } from './simulate.ts';
+import { lerEntrada, paraMotor } from '../components/entrada.js';
 import type { ProcessInput } from './types.ts';
 
 console.log('Iniciando testes unitários do Escalonador...\n');
@@ -300,18 +301,44 @@ console.log('Iniciando testes unitários do Escalonador...\n');
   const ambos = parseInput('quantum: 4\naging: 3\n0 5 2');
   assert.deepEqual(ambos.configDefined, { quantum: true, aging: true });
 
-  console.log('✅ Regressões do code review (inteiros, comentários inline, quantum, configDefined): OK');
-}
-
-  // lerEntrada deve devolver SÓ as chaves que o texto define, senão importar um
-  // arquivo com apenas `aging` zera o quantum que o usuário digitou na tela.
-  assert.deepEqual(parseInput('aging: 3\n0 5 2').configDefined, { quantum: false, aging: true });
-
-  // Erro de entrada é InputError; a CLI usa isso para não engolir bug de verdade.
+  // Erro de entrada é InputError; a CLI usa isso para distinguir entrada ruim de
+  // bug nosso (só a mensagem dos primeiros é mostrada sem stack trace).
   assert.throws(() => parseInput('0 2.5 1'), InputError);
   assert.throws(() => parseInput('quantum: 0\n0 5 1'), InputError);
 
-// 14. Diagrama vertical no formato do enunciado ("0- 1"), inclusive em simulações curtas
+  console.log('✅ Regressões do code review (inteiros, comentários inline, quantum, configDefined): OK');
+}
+
+// 14. lerEntrada (adaptador da interface) devolve só as chaves que o texto define
+{
+  // Se devolvesse o Config inteiro, importar um arquivo com apenas `aging` zeraria
+  // o quantum que o usuário digitou na tela, porque as chaves ausentes vêm
+  // preenchidas com DEFAULT_CONFIG.
+  const soAging = lerEntrada('aging: 3\n0 5 2');
+  assert.deepEqual(soAging.config, { aging: 3 }, 'config deve trazer só `aging`');
+  assert.equal('quantum' in soAging.config, false, 'não pode inventar um quantum');
+  const estadoDaTela = { quantum: 8, aging: 1 };
+  assert.deepEqual({ ...estadoDaTela, ...soAging.config }, { quantum: 8, aging: 3 },
+    'mesclar sobre o estado da tela preserva o quantum digitado');
+
+  const soQuantum = lerEntrada('quantum: 4\n0 5 2');
+  assert.deepEqual(soQuantum.config, { quantum: 4 });
+
+  const ambas = lerEntrada('quantum: 4\naging: 3\n0 5 2');
+  assert.deepEqual(ambas.config, { quantum: 4, aging: 3 });
+
+  // Sem configuração no texto, a tela não deve mexer no que já está lá.
+  assert.equal(lerEntrada('0 5 2').config, null);
+
+  // E a conversão para o formato do motor preserva os valores.
+  assert.deepEqual(paraMotor(soAging.processes), [
+    { id: 'P1', order: 1, arrivalTime: 0, duration: 5, staticPriority: 2 },
+  ]);
+
+  console.log('✅ lerEntrada / paraMotor (adaptador da interface): OK');
+}
+
+// 15. Diagrama vertical no formato do enunciado ("0- 1"), inclusive em simulações curtas
 {
   const r = runFCFS([
     { id: 'P1', order: 1, arrivalTime: 0, duration: 2, staticPriority: 1 },
